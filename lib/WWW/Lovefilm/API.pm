@@ -86,10 +86,16 @@ sub REST {
   return WWW::Lovefilm::API::_UrlAppender->new( stack => $self->_levels, append => {users=>$self->user_id} );
 }
 
+sub _base_url {
+    my $self = shift;
+    return $self->privateapi ? 'http://api.lovefilm.com' : 'http://openapi.lovefilm.com';
+}
+
 sub url {
   my $self = shift;
   return $self->_url if $self->_url;
-  my $api_url = $self->privateapi ? 'http://api.lovefilm.com' : 'http://openapi.lovefilm.com';
+  my $api_url = $self->_base_url;
+
   return join '/', $api_url, @{ $self->_levels || [] };
 }
 
@@ -159,72 +165,74 @@ sub rest2sugar {
 	
 }
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+sub RequestToken {
+    my $self = shift;
+    my ($request, $response);
 
-sub RequestAccess {
-  my $self = shift;
-  my ($user, $pass) = @_;
-
-  my ($request, $response);
-  ###
-  $request = $self->__OAuth_Request(
+    $request = $self->__OAuth_Request(
 	'request token',
-	request_url  => 'http://openapi.lovefilm.com/oauth/request_token',
+	request_url  => $self->_base_url . '/oauth/request_token',
 	request_method => 'POST',
-  ) or do {
+    ) or do {
 	warn $self->content_error;
 	return;
-  };
-  $response = Net::OAuth->response('request token')->from_post_body( $self->original_content );
-  my $request_token    = $response->token
-	or return;
-  my $request_secret   = $response->token_secret;
-  my $login_url        = $response->extra_params->{login_url};
-  my $application_name = $response->extra_params->{application_name};
-  $application_name =~ tr/+/ /;
-  $application_name = uri_unescape( $application_name );
-  ###
-    my $mech = WWW::Mechanize->new;
-    my $url = sprintf '%s&oauth_callback=%s&oauth_consumer_key=%s&application_name=%s',
-	$login_url,
-	map { uri_escape($_) }
-		'',
-		$self->consumer_key,
-		$application_name,
-    ; 
-    $mech->get($url);
-    if ( ! $mech->success ) {
-	warn sprintf 'Get of "%s" FAILED (%s): "%s"', $url, $mech->res->status_line, $mech->content;
-	return;
-    }
-    my %fields = (
-		login => $user,
-		password => $pass,
-    );
-    if( ! $mech->form_with_fields(keys %fields) ){
-      warn "Submission to '$url' failed. Content: ".$mech->content;
-      return;
-    }
-    $mech->submit_form( fields => \%fields );
-  return unless $mech->content =~ /successfully/i && $mech->content !~ /failed/i;
-  ###
-  $request = $self->__OAuth_Request(
-	'access token',
-	request_url  => 'http://openapi.lovefilm.com/oauth/access_token',
-	request_method => 'POST',
-	token => $request_token,
-	token_secret => $request_secret,
-  ) or do {
-	warn $self->content_error;
-	return;
-  };
-  $response = Net::OAuth->response('access token')->from_post_body( $self->original_content );
+    };
+    $response = Net::OAuth->response('request token')->from_post_body( $self->original_content );
+    my $request_token    = $response->token
+        or return;
 
-  $self->access_token(  $response->token );
-  $self->access_secret( $response->token_secret );
-  $self->user_id(       $response->extra_params->{user_id} );
-  return ($self->access_token, $self->access_secret, $self->user_id);
+    return (
+        token        => $request_token,
+        login_url    => $response->extra_params->{login_url},
+        token_secret => $response->token_secret
+    );
 }
+
+=head2RequestAccessToken
+
+This method is to be called after the user has been redirected back to your
+site after granting your app access.
+
+There is some logic which I don't quite understand in that the user_id is
+not returned with the acces token. Hence we do an additional call to get it.
+
+=cut
+
+sub RequestAccessToken {
+    my $self   = shift;
+    my (%args) = @_;
+    my ($request_token, $request_secret) = @_;
+
+    my $request = $self->__OAuth_Request(
+	'access token',
+	request_url    => $self->_base_url . '/oauth/access_token',
+	request_method => 'POST',
+	token          => $args{oauth_token},
+	token_secret   => $args{token_secret},
+    ) or do {
+	warn $self->content_error;
+	return;
+    };
+
+    my $response = Net::OAuth->response('access token')->from_post_body( $self->original_content );
+
+    $self->access_token(  $response->token );
+    $self->access_secret( $response->token_secret );
+
+    # Get the uses ID. See POD for this routine as to why
+    #
+    $self->REST->Users();
+    $self->Get();
+
+    if ($self->content) {
+        my $href      = $self->content->{link}->{href};
+        my ($user_id) = ($href =~ m!([^/]+)$!);
+        $self->user_id($user_id);
+    }
+
+    return (access_token => $self->access_token, access_secret => $self->access_secret, user_id => $self->user_id);
+}
+
 
 sub __OAuth_Request {
   my $self = shift;
@@ -470,6 +478,12 @@ Retrieves the entire Lovefilm catalog and saves it to I<catalog.xml> in the curr
 =item catalog2db.pl
 
 Converts the xmlfile fetched by I<catalog.pl> to a SQLite database.  Also contains an example DBIx::Class setup for working with the generated database.
+
+=item test_cgi.pl
+
+A simple CGI script that shows the end to end process in a browser of a user being redirected to
+LOVEFiLM, granting the script access, then being redirected back and showing what films the user
+has at home.
 
 =back
 
