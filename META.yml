@@ -3,7 +3,7 @@ name:               WWW-Lovefilm-API
 version:            0.10
 abstract:           Interface for Lovefilm's API
 author:
-    - David Westbrook <paul.cpan@phymatics.co.uk>
+    - Paul Mooney <paul.cpan@phymatics.co.uk>
 license:            unknown
 distribution_type:  module
 configure_requires:
