@@ -707,14 +707,19 @@ L<http://search.cpan.org/dist/WWW-Lovefilm-API>
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2009 David Westbrook, all rights reserved.
-copyright 2010 Paul Mooney, all rights reserved.
+=over 4
+
+=item Copyright 2009 David Westbrook, all rights reserved.
+
+=item Copyright 2010 Paul Mooney, all rights reserved.
+
+=back
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 This package is a derivative of WWW::Netflix::API, which was created by
-created by David Westbrook.
+David Westbrook.
 
 =cut
 
