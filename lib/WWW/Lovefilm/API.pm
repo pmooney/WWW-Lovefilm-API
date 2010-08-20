@@ -188,16 +188,6 @@ sub RequestToken {
     );
 }
 
-=head2RequestAccessToken
-
-This method is to be called after the user has been redirected back to your
-site after granting your app access.
-
-There is some logic which I don't quite understand in that the user_id is
-not returned with the acces token. Hence we do an additional call to get it.
-
-=cut
-
 sub RequestAccessToken {
     my $self   = shift;
     my (%args) = @_;
@@ -282,9 +272,13 @@ sub __OAuth_Request {
   }
   # if content_filter exists and is a scalar, then use it as the filename to write to instead of content being in memory.
   my $response = $self->ua->request( $req, ($self->content_filter && !ref($self->content_filter) ? $self->content_filter : ()) );
-  if ( ! $response->is_success ) {
+
+  #use Data::Dumper;
+  #warn "response = " . Dumper($response);
+
+   if ( ! $response->is_success ) {
         $self->content_error( sprintf '%s Request to "%s" failed (%s): "%s"', $method, $url, $response->status_line, $response->content );
-        return;
+       return;
   }elsif( ! length ${$response->content_ref} ){
         $self->content_error( sprintf '%s Request to "%s" failed (%s) (__EMPTY_CONTENT__): "%s"', $method, $url, $response->status_line, $response->content );
         return;
@@ -351,7 +345,7 @@ The Lovefilm API allows access to movie and user information, including queues, 
   use Data::Dumper;
 
   my %auth = Your::Custom::getAuthFromCache();
-  # consumer key/secret values below are fake
+
   my $lovefilm = WWW::Lovefilm::API->new({
     consumer_key    => $auth{consumer_key},
     consumer_secret => $auth{consumer_secret},
@@ -363,18 +357,41 @@ The Lovefilm API allows access to movie and user information, including queues, 
   });
 
   if( ! $auth{user_id} ){
-    my ( $user, $pass ) = .... ;
-    @auth{qw/access_token access_secret user_id/} = $lovefilm->RequestAccess( $user, $pass );
-    Your::Custom::storeAuthInCache( %auth );
+    my %data = $lovefilm->RequestToken();
+
+    my $token    = $data{token};
+    my $encoded  = uri_escape('?myuser=123'); # params will be sent back to us
+    my $this_url = $q->url();
+    my $url      = $data{login_url} . '?oauth_token=' . $data{token}. ";oauth_callback=$this_url" . $encoded;
+
+    # -- REDIRECT USER TO $url HERE --
+
+    my $q            = CGI->new;
+    my $token_secret = $q->param('token');
+    my %more_data    = $lovefilm->RequestAccessToken(
+        oauth_token  => $data{token},         # got from RequestToken()
+        token_secret => $token_secret, 
+    );
+
+    # %more_data till now hold access_token and access_secret
   }
 
-  $lovefilm->REST->Users->Feeds;
+  $lovefilm->REST->Users;
+  $lovefilm->Get() or die $lovefilm->content_error;
+  print Dumper $lovefilm->content; # Basic info on this user
+
+  $lovefilm->REST->Users->at_home();  # What discs do they have at home
   $lovefilm->Get() or die $lovefilm->content_error;
   print Dumper $lovefilm->content;
 
-  $lovefilm->REST->Catalog->Titles->Movies('18704531');
-  $lovefilm->Get() or die $lovefilm->content_error;
-  print Dumper $lovefilm->content;
+  $lovefilm->REST->Catalog->Title;
+  $lovefilm->Get(
+    term           => 'batman',
+    start_index    => 1, # 1 based index
+    items_per_page => 20,
+  );
+
+  my $data = $lovefilm->content;
 
 And for resources that do not require a lovefilm account:
 
@@ -385,36 +402,30 @@ And for resources that do not require a lovefilm account:
         consumer_secret
         content_filter => sub { XMLin(@_) },
   });
-  $lovefilm->REST->Catalog->Titles;
+  $lovefilm->REST->Catalog->Title;
   $lovefilm->Get( term => 'zzyzx' );
-  printf "%d Results.\n", $lovefilm->content->{number_of_results};
-  printf "Title: %s\n", $_->{title}->{regular} for values %{ $lovefilm->content->{catalog_title} };
-
-
-  # Retrieve entire catalog:
-  $lovefilm->content_filter('catalog.xml');
-  $lovefilm->REST->Catalog->Titles->Index;
-  $lovefilm->Get();
+  printf "%d Results.\n", $lovefilm->content->{total_results};
+  printf "Title: %s\n", $_->{title}->{clean} for values %{ $lovefilm->content->{catalog_title} };
 
 =head1 GETTING STARTED
 
 The first step to using this module is to register at L<http://developer.lovefilm.com> -- you will need to register your application, for which you'll receive a consumer_key and consumer_secret keypair.
 
 Any applications written with the Lovefilm API must adhere to the
-Terms of Use (L<http://developer.lovefilm.com/page/Api_terms_of_use>)
+Terms of Use (L<http://developer.lovefilm.com/docs/additional_information/Terms_of_Use>)
 and
-Branding Requirements (L<http://developer.lovefilm.com/docs/Branding>).
+Branding Requirements (L<http://developer.lovefilm.com/docs/Additional_Information/Brand_Guidelines>).
 
 =head2 Usage
 
-This module provides access to the REST API via perl syntactical sugar. For example, to find a user's queue, the REST url is of the form users/I<userID>/feeds :
+This module provides access to the REST API via perl syntactical sugar. For example, to find a user's queue, the REST url is of the form users/I<userID>/queues :
 
-  http://api.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/disc
+  http://api.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/
 
 Using this module, the syntax would be
 (note that the Post or Delete methods can be used instead of Get, depending upon the API action being taken):
 
-  $lovefilm->REST->Users->Queues->Disc;
+  $lovefilm->REST->Users->Queues;
   $lovefilm->Get(%$params) or die $lovefilm->content_error;
   print $lovefilm->content;
 
@@ -422,9 +433,11 @@ Other examples include:
 
   $lovefilm->REST->Users;
   $lovefilm->REST->Users->At_Home;
-  $lovefilm->REST->Catalog->Titles->Movies('18704531');
-  $lovefilm->REST->Users->Feeds;
-  $lovefilm->REST->Users->Rental_History;
+  $lovefilm->REST->users->at_home;           # Case independant
+  $lovefilm->REST->Catalog->Title('78324');
+  $lovefilm->REST->Users->rented;
+
+Please note: 
 
 All of the possibilities (and parameter details) are outlined here:
 L<http://developer.lovefilm.com/docs/REST_API_Reference>
@@ -435,12 +448,9 @@ There is a helper method L<"rest2sugar"> included that will provide the proper s
 
 The following describe the authentication that's happening under the hood and were used heavily in writing this module:
 
-L<http://developer.lovefilm.com/docs/Security>
-
-L<http://josephsmarr.com/2008/10/01/using-lovefilms-new-api-a-step-by-step-guide/#>
+L<http://sites.google.com/site/oauthgoog/2leggedoauth/2opensocialrestapi>
 
 L<Net::OAuth>
-
 
 =head1 EXAMPLES
 
@@ -525,6 +535,16 @@ This is used to login as a lovefilm user in order to get an access token.
 =head2 Delete
 
 =head2 rest2sugar
+
+=head2 RequestAccessToken
+
+This method is to be called after the user has been redirected back to your
+site after granting your app access.
+
+It would be nice is the user_id was returned with the access token, but its not.
+This method makes an additional call for you to get it as it's rather important.
+
+=cut
 
 
 =head1 ATTRIBUTES
@@ -645,7 +665,7 @@ Please email me with your application name and url or email, and i will be happy
 =head1 AUTHOR
 
 David Westbrook (CPAN: davidrw), C<< <dwestbrook at gmail.com> >>
-Paul Mooneu (CPAN: pmooney),  C<< <paul.cpan at phymatics.co.uk> >>
+Paul Mooney (CPAN: pmooney),  C<< <paul.cpan at phymatics.co.uk> >>
 
 
 =head1 BUGS

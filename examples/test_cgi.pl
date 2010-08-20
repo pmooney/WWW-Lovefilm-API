@@ -10,9 +10,10 @@ test_cgi.pl
 
 This is an incredibly simple (and awful) script to show new programmers
 the OAuth steps required to connect to LOVEFiLM. Please use it as a guide
-only as programming style has moved on since the 90's :)
+only as programming style has moved on since the 90's, however it does keep
+the dependancies down.
 
-Also, It will only work for one user.
+Also, it will only work for one user.
 
 =head1 RUNNING
 

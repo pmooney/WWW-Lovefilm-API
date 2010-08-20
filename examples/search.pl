@@ -12,7 +12,7 @@ my $lovefilm = WWW::Lovefilm::API->new({
     content_filter => sub { XMLin(@_) },
 });
 
-$lovefilm->REST->Catalog->Title;
+$lovefilm->REST->catalog->title;
 $lovefilm->Get(
     term           => $search_string,
     start_index    => 1, # Mmm, zero does not work, must be 1 based index

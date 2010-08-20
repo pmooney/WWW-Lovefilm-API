@@ -89,7 +89,7 @@ is( $lovefilm->url, 'foo',                 '[url;+-] check url()'    );
 
 is( $lovefilm->_url(''), '',               '[url;--] set _url    -'  );
 is( $lovefilm->_levels(undef), undef,      '[url;--] set _levels -'  );
-is( $lovefilm->url, 'http://api.lovefilm.com',
+is( $lovefilm->url, 'http://openapi.lovefilm.com',
                                           '[url;--] check url()'    );
 
 my $arr = [123,456];
@@ -99,6 +99,6 @@ is( $lovefilm->url, 'foo',                 '[url;++] check url()'    );
 
 is( $lovefilm->_url(''), '',               '[url;-+] set _url    -'  );
 is_deeply( $lovefilm->_levels($arr), $arr, '[url;-+] set _levels +'  );
-is( $lovefilm->url, 'http://api.lovefilm.com/123/456',
+is( $lovefilm->url, 'http://openapi.lovefilm.com/123/456',
                                           '[url;-+] check url()'    );
 

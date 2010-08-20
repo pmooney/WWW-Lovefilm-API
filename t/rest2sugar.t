@@ -18,14 +18,14 @@ sub test_url {
   is( $submit, sprintf('$lovefilm->Get(%s)',$params), "[$sugar] submit" );
   eval "$rest";
   my ($base) = split '\?', $url;
-  is( $lovefilm->url, $base, "[$sugar] reverse matches" ) or diag("base = $base not equal to " .  $lovefilm->url);
+  is( $lovefilm->url, $base, "[$sugar] reverse matches" ) or diag("privateapi = " . $lovefilm->privateapi);
 }
 
-foreach my $openapi (0,1) {
-    my $baseurl  = $openapi ? 'http://openapi.lovefilm.com' : 'http://api.lovefilm.com';
+foreach my $privateapi (0,1) {
+    my $baseurl  = $privateapi ? 'http://api.lovefilm.com' : 'http://openapi.lovefilm.com';
     my $lovefilm = WWW::Lovefilm::API->new({
-      user_id => 'T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-',
-      openapi => $openapi,
+      user_id    => 'T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-',
+      privateapi => $privateapi,
     });
 
     # these URLs may have no link to the URLs specified by teh API itself, it is just testing URL creation
