@@ -536,6 +536,21 @@ This is used to login as a lovefilm user in order to get an access token.
 
 =head2 rest2sugar
 
+=head2 RequestToken
+
+Makes a call to LOVEFiLM to get a token. It returns a hash with the following information required
+when you redirect the user to the LOVEFiLM website
+
+=over 4
+
+=item token        => $token
+
+=item login_url    => $login_url,
+
+=item token_secret => $token_secret
+
+=back
+
 =head2 RequestAccessToken
 
 This method is to be called after the user has been redirected back to your
