@@ -1,5 +1,8 @@
 Revision history for WWW-Lovefilm-API
 
+0.12    2010-09-06
+        * Fully removed references to WWW::Mechanize
+
 0.11    2010-09-02
         * Embarrassingly failing POD tests fixed
         * Date of 0.10 below changed to reflect reality

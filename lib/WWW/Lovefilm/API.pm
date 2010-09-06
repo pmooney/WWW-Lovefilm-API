@@ -3,14 +3,13 @@ package WWW::Lovefilm::API;
 use warnings;
 use strict;
 
-our $VERSION = '0.11';
+our $VERSION = '0.12';
 
 use base qw(Class::Accessor);
 
 use Net::OAuth;
 use HTTP::Request::Common;
 use LWP::UserAgent;
-use WWW::Mechanize;
 use URI::Escape;
 
 __PACKAGE__->mk_accessors(qw/
