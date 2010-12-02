@@ -1,10 +1,10 @@
 --- #YAML:1.0
 name:               WWW-Lovefilm-API
-version:            0.12
+version:            0.13
 abstract:           Interface for Lovefilm's API
 author:
     - Paul Mooney <paul.cpan@phymatics.co.uk>
-license:            unknown
+license:            perl
 distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
@@ -22,6 +22,8 @@ no_index:
     directory:
         - t
         - inc
+resources:
+    repository: https://github.com/pmooney/WWW-Lovefilm-API
 generated_by:       ExtUtils::MakeMaker version 6.54
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html

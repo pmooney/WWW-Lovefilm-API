@@ -3,7 +3,7 @@ package WWW::Lovefilm::API;
 use warnings;
 use strict;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 use base qw(Class::Accessor);
 
@@ -272,9 +272,6 @@ sub __OAuth_Request {
   # if content_filter exists and is a scalar, then use it as the filename to write to instead of content being in memory.
   my $response = $self->ua->request( $req, ($self->content_filter && !ref($self->content_filter) ? $self->content_filter : ()) );
 
-  #use Data::Dumper;
-  #warn "response = " . Dumper($response);
-
    if ( ! $response->is_success ) {
         $self->content_error( sprintf '%s Request to "%s" failed (%s): "%s"', $method, $url, $response->status_line, $response->content );
        return;
@@ -327,7 +324,7 @@ WWW::Lovefilm::API - Interface for LOVEFiLM's API
 
 =head1 VERSION
 
-Version 0.10
+Version 0.13
 
 
 =head1 OVERVIEW
@@ -342,6 +339,8 @@ The Lovefilm API allows access to movie and user information, including queues, 
   use WWW::Lovefilm::API;
   use XML::Simple;
   use Data::Dumper;
+  use URI::Escape;
+  use JSON;
 
   my %auth = Your::Custom::getAuthFromCache();
 
@@ -365,7 +364,6 @@ The Lovefilm API allows access to movie and user information, including queues, 
 
     # -- REDIRECT USER TO $url HERE --
 
-    my $q            = CGI->new;
     my $token_secret = $q->param('token');
     my %more_data    = $lovefilm->RequestAccessToken(
         oauth_token  => $data{token},         # got from RequestToken()
@@ -419,7 +417,7 @@ Branding Requirements (L<http://developer.lovefilm.com/docs/Additional_Informati
 
 This module provides access to the REST API via perl syntactical sugar. For example, to find a user's queue, the REST url is of the form users/I<userID>/queues :
 
-  http://api.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/
+  http://openapi.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/
 
 Using this module, the syntax would be
 (note that the Post or Delete methods can be used instead of Get, depending upon the API action being taken):
@@ -519,7 +517,7 @@ This is used to change the resource that is being accessed. Some examples:
   $lovefilm->REST->Catalog->Title('60021896');
 
   # Load a pre-formed url (e.g. a title_ref from a previous query)
-  $lovefilm->REST('http://api.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/disc?feed_token=T1u.tZSbY9311F5W0C5eVQXaJ49.KBapZdwjuCiUBzhoJ_.lTGnmES6JfOZbrxsFzf&amp;oauth_consumer_key=v9s778n692e9qvd83wfj9t8c&amp;output=atom');
+  $lovefilm->REST('http://openapi.lovefilm.com/users/T1tareQFowlmc8aiTEXBcQ5aed9h_Z8zdmSX1SnrKoOCA-/queues/disc?feed_token=T1u.tZSbY9311F5W0C5eVQXaJ49.KBapZdwjuCiUBzhoJ_.lTGnmES6JfOZbrxsFzf&amp;oauth_consumer_key=v9s778n692e9qvd83wfj9t8c&amp;');
 
 =head2 RequestAccess
 

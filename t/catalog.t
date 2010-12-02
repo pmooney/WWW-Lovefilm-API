@@ -11,7 +11,7 @@ my %env = map { $_ => $ENV{"WWW_LOVEFILM_API__".uc($_)} } qw/
         consumer_secret
 /;
 
-if( ! $env{consumer_key} ){
+if( ! $env{consumer_key} && ! $env{consumer_secret}){
   plan skip_all => 'Make sure that ENV vars are set for consumer_key & consumer_secret';
   exit;
 }

@@ -44,20 +44,14 @@ sub check_submit {
 }
 
 
-$lovefilm->REST->Catalog->Titles->Movies('18704531');
+$lovefilm->REST->catalog->title('18704531');
 check_submit( $lovefilm, 'average_rating,box_art,category,id,link,release_year,runtime,title' );
 
 $lovefilm->REST->Users;
 check_submit( $lovefilm, 'can_instant_watch,first_name,last_name,link,nickname,preferred_formats,user_id' );
 
-$lovefilm->REST->Users->At_Home;
+$lovefilm->REST->users->at_home;
 check_submit( $lovefilm, 'at_home_item,number_of_results,results_per_page,start_index,url_template' );
-
-$lovefilm->REST->Users->Feeds;
-check_submit( $lovefilm, 'link' );
-
-#$lovefilm->REST->Users->Title_States;
-#check_submit( $lovefilm, 'at_home_item,number_of_results,results_per_page,start_index,url_template', {title_refs=>['http://api.lovefilm.com/catalog/titles/movies/70036143']} );
 
 $lovefilm->REST->Users->Queues;
 check_submit( $lovefilm, 'link' );
@@ -68,15 +62,10 @@ check_submit( $lovefilm, 'etag,link,number_of_results,queue_item,results_per_pag
 $lovefilm->REST->Users->Queues->Instant;
 check_submit( $lovefilm, 'etag,link,number_of_results,queue_item,results_per_page,start_index,url_template' );
 
-
-$lovefilm->REST->Users->Queues->Disc;
-$lovefilm->REST( $lovefilm->rest_url );
-check_submit( $lovefilm, 'etag,link,number_of_results,queue_item,results_per_page,start_index,url_template' );
-
-$lovefilm->REST('http://api.lovefilm.com/catalog/titles/movies/18704531');
+$lovefilm->REST('http://openapi.lovefilm.com/catalog/titles/movies/18704531');
 check_submit( $lovefilm, 'average_rating,box_art,category,id,link,release_year,runtime,title' );
 
 my $uid = $lovefilm->user_id;
-$lovefilm->REST("http://api.lovefilm.com/users/$uid/queues/instant");
+$lovefilm->REST("http://openapi.lovefilm.com/users/$uid/queues/instant");
 check_submit( $lovefilm, 'etag,link,number_of_results,queue_item,results_per_page,start_index,url_template' );
 

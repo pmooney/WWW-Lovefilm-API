@@ -45,8 +45,20 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use WWW::Lovefilm::API;
 
-my $q = CGI->new;
+# I've not tested this code on a Windows machine, so the below code may or may not work.
+#
+my $store_filename = '/tmp/store'; # UNIX/Linux only
 
+if (! -e '/tmp') {
+    if ($ENV{TEMP}) {
+        $store_filename = $ENV{TEMP};
+    }
+    else {
+        die "No /tmp or TEMP environment variable set.\n";
+    }
+}
+
+my $q = CGI->new;
 
 # Prepare various HTTP responses
 print
@@ -67,14 +79,86 @@ my $lovefilm = WWW::Lovefilm::API->new({
 
 
 if ( defined($store{access_token}) ) {
-    _welcome();
+    # If we have a access_token the users account is linked to out app
+    # 
+    _user_logged_in_page();
 }
-# Been redirect back to this script by LOVEFiLM?
-#
+
 elsif ( $q->param('myuser') ) {
+    # Been redirect back to this script by LOVEFiLM, the param 'myuser' we asked to to be sent back to us
+    #
+    _redirect();
+}
+else {
+    # Fresh request to talk to LOVEFiLM, get a token
+    #
+    _link_user_account();
+}
+
+print $q->end_html;
+
+
+=head2 _store
+
+This is a cheap way of storing state when the user gets redirected.
+
+=cut
+
+sub _store {
+    my %data = @_;
+    my $dd   = Data::Dumper->new([\%data], [ qw(data) ]);
+
+    open my $handle, ">$store_filename" or die "ERROR: could not write to file $store_filename: $!";
+    print $handle $dd->Dump();
+    close $handle;
+}
+
+=head2 _append
+
+This appends any new key values onto the existing state.
+
+=cut
+
+sub _append {
+    my %append   = @_;
+    my %data     = (_read(), %append);
+    my $dd       = Data::Dumper->new([\%data], [ qw(data) ]);
+
+    _store(%data, %append);
+}
+
+=head2 _read
+
+return a hash of representing the stored state
+
+=cut
+
+sub _read {
+    unless (-f $store_filename) {
+        return;
+    }
+
+    my $data = do {
+        if( open my $fh, '<', $store_filename ) { local $/; <$fh> }
+        else { undef }
+    };
+
+    eval $data;
+
+    return %{$data};
+}
+
+=head2 _redirect
+
+Assume the user has accepted a use signup, hence get the access_token, store it, then display the titles
+they have at home.
+
+=cut
+
+sub _redirect {
     print
         $q->p("You must have been redirected back from LOVEFiLM after authorising this app for your account ".
-              "as I picked up my parameter I set.");
+              "as I picked up the parameter I asked LOVEFiLM to send back to me.");
 
     my %data = $lovefilm->RequestAccessToken(
         oauth_token  => $store{token},
@@ -90,12 +174,19 @@ elsif ( $q->param('myuser') ) {
         %store = _read();
 
         print $q->p("The details we have are: " . $q->pre(Dumper(\%store)));
-        _welcome();
+        _user_logged_in_page();
     }
 }
-# Fresh request to talk to LOVEFiLM, get a token
-#
-else {
+
+=head2 _link_user_account
+
+Create a link for the user to click on that will take them to the LOVEFiLM site.
+In the link is the oauth_token (request token) which we asked the LOVEFiLM API for
+first, hence when the user goes to their website they know our app sent them.
+
+=cut
+
+sub _link_user_account {
     my %data = $lovefilm->RequestToken(  );
 
     if ($data{token} && $data{login_url}) {
@@ -115,80 +206,20 @@ else {
     else {
         print 
             $q->h1('Error') .
-            $q->p("Could not access LOVEFiLM !!!");
+            $q->p("Could not access LOVEFiLM! ") .
+            $q->p("Have you updated vars_tokenless.inc in the examples directory with your ".
+                  "consumer key and secret?");
     }
 }
 
-print $q->end_html;
-
-
-=head2 _store
-
-This is a cheap way of storing state when the user gets redirected.
-
-=cut
-
-sub _store {
-    my %data = @_;
-    my $filename = '/tmp/store';
-
-    my $dd = Data::Dumper->new([\%data], [ qw(data) ]);
-
-    open my $handle, ">$filename" or die "ERROR: could not write to file $filename: $!";
-    print $handle $dd->Dump();
-    close $handle;
-}
-
-=head2 _append
-
-This appends any new key values onto the existing state.
-
-=cut
-
-
-sub _append {
-    my %append   = @_;
-    my $filename = '/tmp/store';
-
-    my %data = (_read(), %append);
-    my $dd   = Data::Dumper->new([\%data], [ qw(data) ]);
-
-    open my $handle, ">$filename" or die "ERROR: could not write to file $filename: $!";
-    print $handle $dd->Dump();
-    close $handle;
-}
-
-=head2 _read
-
-return a hash of representing the stored state
-
-=cut
-
-sub _read {
-    unless (-f '/tmp/store') {
-        return;
-    }
-
-    my $data = do {
-        if( open my $fh, '<', '/tmp/store' ) { local $/; <$fh> }
-        else { undef }
-    };
-
-    my $isbn;
-
-    eval $data;
-
-    return %{$data};
-}
-
-=head2 _welcome
+=head2 _user_logged_in_page
 
 This function will only work if the user has given permission to your
 app to access your account at LOVEFiLM.
 
 =cut
 
-sub _welcome {
+sub _user_logged_in_page {
     # Who has authorised this app?
     #
     $lovefilm->REST->Users(); # user_id automatically added in i.e. /users/1234567
@@ -207,19 +238,24 @@ sub _welcome {
     $lovefilm->Get();
     $content = $lovefilm->content;
 
-    print
-        $q->start_table() .
-        $q->Tr($q->th(), $q->th("Name"), $q->th("Rating"));
-
-    foreach my $item (@{$content->{'at_home_item'}}) {
-        my $catalog_title   = $item->{catalog_title};
-        my $art_href =_get_artwork_href($catalog_title);
+    if (!defined($content->{'at_home_item'})) {
+        print "<p>Nothing yet! Please go and select some great films/games/shows</p>"
+    }
+    else {
         print
-            $q->Tr(
-                $q->td($q->img({src => $art_href, alt => $catalog_title->{title}->{clean}, rowspan => 2})),
-                $q->td($catalog_title->{title}->{clean}).
-                $q->td($catalog_title->{rating} . "/5")
-            );
+            $q->start_table() .
+            $q->Tr($q->th(), $q->th("Name"), $q->th("Rating"));
+
+        foreach my $item (@{$content->{'at_home_item'}}) {
+            my $catalog_title   = $item->{catalog_title};
+            my $art_href =_get_artwork_href($catalog_title);
+            print
+                $q->Tr(
+                    $q->td($q->img({src => $art_href, alt => $catalog_title->{title}->{clean}, rowspan => 2})),
+                    $q->td($catalog_title->{title}->{clean}).
+                    $q->td($catalog_title->{rating} . "/5")
+                );
+        }
     }
 
     print $q->end_table;;

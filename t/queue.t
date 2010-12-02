@@ -14,7 +14,7 @@ my %env = map { $_ => $ENV{"WWW_LOVEFILM_API__".uc($_)} } qw/
         user_id
 /;
 
-if( ! $env{consumer_key} ){
+if( ! ($env{consumer_key} && $env{consumer_secret} && $env{access_token} && $env{access_secret} && $env{user_id} )){
   plan skip_all => 'Make sure that ENV vars are set for consumer_key, etc';
   exit;
 }
@@ -114,52 +114,4 @@ $lovefilm->REST->Users->Queues->Instant->Available($id);
 ok( $lovefilm->Delete, 'Removing from Instant queue' )
   or diag $lovefilm->content_error;
 $etag = check_queues( $lovefilm, $id, $ref, 'Add', undef, 'Play', undef );
-
-
-__END__
-
-use Data::Dumper;
-print Dumper [ $lovefilm->content, $lovefilm->content_error ];
-exit;
-
-# instant queue: In Queue
-# disc queue: In Queue
-# instant queue: Play
-# disc queue: Add
-
-use Data::Dumper;
-$lovefilm->REST->Users->Title_States;
-$lovefilm->Get( title_refs => $ref );
-print Dumper $lovefilm->content;
-
-my $items = $lovefilm->content->{title_state}->{title_state_item};
-$items = [ $items ] unless ref($items) eq 'ARRAY';
-foreach my $item ( @$items ){
-  my $q = $item->{link}->{title};
-  my ($s) = map { $_->{label} } grep { $_->{scheme} =~ m#/title_states$# } @{ $item->{format}->{category} };
-  print "$q: $s\n";
-}
-exit;
-
-#$lovefilm->REST->Users->Queues->Disc->Available($id);
-#$lovefilm->Delete;
-#print Dumper $lovefilm->content;
-
-#exit;
-
-$lovefilm->REST->Users->Queues->Instant(max_results => 1);
-$lovefilm->Get;
-my $etag = $lovefilm->content->{etag};
-warn "ETA: " . $etag;
-
-$lovefilm->REST->Users->Queues->Instant;
-warn $lovefilm->Post( title_ref => $ref, position => 40, etag => $etag );
-
-print Dumper $lovefilm->content;
-
-$lovefilm->REST->Users->Queues->Instant;
-$lovefilm->Get( max_results => 500 );
-open FILE, '>out2.txt';
-print FILE Dumper $lovefilm->content;
-close FILE;
 

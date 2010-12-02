@@ -1,5 +1,14 @@
 Revision history for WWW-Lovefilm-API
 
+0.13    2010-10-22
+        * Code review by Willem Basson, many minor tweaks:
+        * test_cgi.pl does not assume /tmp exists. Minor refactor of script too.
+        * examples/catalog-lwp_handlers.pl explains HTML return format
+        * reduced size of catalog.xml
+        * state licence as 'perl'
+        * Synopsis code might actually compile now if run :)
+        * Removed some commented out debug
+
 0.12    2010-09-06
         * Fully removed references to WWW::Mechanize
 
