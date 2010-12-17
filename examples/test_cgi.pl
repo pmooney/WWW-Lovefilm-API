@@ -239,7 +239,7 @@ sub _user_logged_in_page {
     $content = $lovefilm->content;
 
     if (!defined($content->{'at_home_item'})) {
-        print "<p>Nothing yet! Please go and select some great films/games/shows</p>"
+        print "<p>Nothing yet! Please go and select some great films, games and shows!</p>"
     }
     else {
         print
